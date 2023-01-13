@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { AuthModule } from 'src/auth/auth.module';
 import { DatabaseService } from 'src/database/database.service';
 import { BoardsController } from './boards.controller';
@@ -13,7 +14,8 @@ import { BoardsService } from './boards.service';
   providers: [
     BoardsService,
     DatabaseService,
-    BoardsRepository
+    BoardsRepository,
+    JwtService
   ]
 })
 export class BoardsModule {}

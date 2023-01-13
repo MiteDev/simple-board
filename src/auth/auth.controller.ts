@@ -1,11 +1,10 @@
-import { Body, Controller, HttpCode, Post, Req, Res, UseGuards, UseInterceptors, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, HttpCode, Get, Post, Req, Res, UseGuards, UseInterceptors, ValidationPipe } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { User } from './auth.entity';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from './dtos/create-user-dto';
-import { SignInDto } from './dtos/sign-in.dto';
-import { GetUser } from './get-user.decorator';
+import { CreateUserDto } from './dto/create-user-dto';
+import { SignInDto } from './dto/sign-in.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -25,19 +24,20 @@ export class AuthController {
         @Res() res: Response
     ) {
         const token = await this.authService.signIn(signInDto);
-        console.log(token);
         res.setHeader('Authorization', `Bearer ${token.accessToken}`);
-        res.cookie('jwt', token.accessToken, {
-            httpOnly: true,
-            maxAge: 60 * 30
+        res.cookie('jwt', token, {
+            maxAge: 1000*60*30,
+            httpOnly: true
         });
-
         return res.send({ success: true })
     }
 
-    @Post('/test')
+    @Post('/signout')
     @UseGuards(AuthGuard())
-    test(@GetUser() user: User) {
-        console.log('user', user);
+    async signout(
+        @Res() res: Response
+    ) {
+        res.clearCookie('jwt');
+        res.send({success: true});
     }
 }
