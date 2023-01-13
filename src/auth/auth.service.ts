@@ -1,27 +1,37 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthRepository } from './auth.repository';
-import { CreateUserDto } from './dto/create-user-dto';
+import { CreateUserDto } from './dtos/create-user-dto';
 import * as bcrypt from 'bcryptjs';
-import { SignInDto } from './dto/sign-in.dto';
+import { SignInDto } from './dtos/sign-in.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-    constructor(private authRepository: AuthRepository) { }
+    constructor(
+        private authRepository: AuthRepository,
+        private jwtService: JwtService
+        ) { }
 
-    async signUp(createUserDto: CreateUserDto): Promise<void> {
-        const { password } = createUserDto
+    async signUp(createUserDto: CreateUserDto): Promise<Boolean> {
+        const { password } = createUserDto;
         const salt = await bcrypt.genSalt();
         createUserDto.password = await bcrypt.hash(password, salt);
 
         await this.authRepository.createUser(createUserDto);
+        return true;
     }
 
-    async signIn(signInDto: SignInDto): Promise<string> {
-        const { username, password } = signInDto;
-        const userData = await this.authRepository.login(username)
+    async signIn(signInDto: SignInDto): Promise<{accessToken: string}> {
+        const { email, password } = signInDto;
+        const userData = await this.authRepository.login(email)
 
         if(userData[0] && (await bcrypt.compare(password, userData[0].password))) {
-            return "login Success"
+            const payload = {
+                email
+            };
+            const accessToken = await this.jwtService.sign(payload);
+
+            return {accessToken: accessToken}
         } else {
             throw new UnauthorizedException('signIn Failed');
         }

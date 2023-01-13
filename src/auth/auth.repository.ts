@@ -1,8 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { UnauthorizedException, ConflictException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2";
 import { DatabaseService } from "src/database/database.service";
 import { User } from "./auth.entity";
-import { CreateUserDto } from "./dto/create-user-dto";
+import { CreateUserDto } from "./dtos/create-user-dto";
 
 interface Users extends User, RowDataPacket {}
 
@@ -11,27 +11,41 @@ export class AuthRepository {
     constructor(private databaseService: DatabaseService) { }
 
     async createUser(createUserDto: CreateUserDto): Promise<ResultSetHeader> {
-        const { username, password } = createUserDto;
-        const queryString = `INSERT INTO users (username, password) VALUES (?, ?)`;
+        const { email, password, name } = createUserDto;
+
+        const queryString = `INSERT INTO account (email, name, password) VALUES (?, ?, ?)`;
         try {
-            const [rows, _]: [ResultSetHeader, FieldPacket[]] = await this.databaseService.db.query(queryString, [username, password]);
+            const [rows, _]: [ResultSetHeader, FieldPacket[]] = await this.databaseService.db.query(queryString, [email, name, password]);
             return rows;
         } catch(err) {
             if(err.errno === 1062) {
-                throw new ConflictException('Existing username');
+                console.log(err);
+                throw new ConflictException('Existing email');
             } else {
+                console.log(err);
                 throw new InternalServerErrorException();
             }
         }
     }
 
-    async login(username: string): Promise<User[]> {
-        const queryString = `SELECT username, password FROM users WHERE username = ?`;
+    async login(email: string): Promise<User[]> {
+        const queryString = `SELECT email, password FROM account WHERE email = ?`;
         try {
-            const [rows, _]: [Users[], FieldPacket[]] = await this.databaseService.db.query(queryString, username);
+            const [rows, _]: [Users[], FieldPacket[]] = await this.databaseService.db.query(queryString, email);
             return rows;
         } catch(err) {
             console.log(err);
         }
     }
-}
+
+    async getOneUser(username: string): Promise<User> {
+        const queryString = `SELECT * FROM users WHERE username = ?`;
+        try {
+            const [rows, _]: [Users[], FieldPacket[]] = await this.databaseService.db.query(queryString, username);
+            return rows[0];
+        } catch(err) {
+            console.log(err);
+            throw new UnauthorizedException();
+        }
+    }
+ }
